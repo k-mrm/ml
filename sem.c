@@ -2,8 +2,8 @@
 #include "ml.h"
 #include "list.h"
 
-Expr *
-analyze(Expr *e)
+List *
+analyze(List *e)
 {
   return NULL;
 }

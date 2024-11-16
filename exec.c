@@ -3,7 +3,7 @@
 #include "list.h"
 
 int
-exec(Expr *e)
+exec(List *e)
 {
   return -1;
 }

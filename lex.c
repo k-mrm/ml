@@ -11,49 +11,6 @@ typedef struct Lex      Lex;
 typedef struct Delta    Delta;
 typedef struct State    State;
 
-enum TokenType {
-  TOKEN_EOS,
-  TOKEN_ID,
-  TOKEN_NAT,
-  TOKEN_REAL,
-
-  TOKEN_ADD,    // +
-  TOKEN_MINUS,  // -
-  TOKEN_MUL,    // *
-  TOKEN_DIV,    // /
-  TOKEN_COMMA,  // ,
-  TOKEN_PERIOD, // .
-  TOKEN_SEMI,   // ;
-  TOKEN_COLON,  // :
-  TOKEN_ASSIGN, // =
-  TOKEN_EQ,     // ==
-  TOKEN_NEQ,	  // !=
-  TOKEN_LT,	    // <
-  TOKEN_GT,	    // >
-  TOKEN_LTE,    // <=
-  TOKEN_GTE,    // >=
-  TOKEN_EX,     // !
-  TOKEN_QUESTION, // ?
-  TOKEN_BAR,    // |
-  TOKEN_BS,     // `\`
-  TOKEN_ALLOW,  // ->
-  TOKEN_LPAREN, // (
-  TOKEN_RPAREN, // )
-
-  TOKEN_LET,
-};
-
-struct Token {
-  LIST(Token);
-  TokenType tt;
-  union {
-    ulong nat;
-    double real;
-    uchar *ident;
-  };
-  int line;
-};
-
 struct State {
   int accept;
   Token *(*callback)(Lex *, uchar *);
@@ -96,35 +53,54 @@ static uchar escaped[256] = {
   ['E'] = '\033'
 };
 
+static uchar *fmt[] = {
+  [TOKEN_ADD]       = "+",
+  [TOKEN_MINUS]     = "-", 
+  [TOKEN_MUL]       = "*", 
+  [TOKEN_DIV]       = "/", 
+  [TOKEN_COMMA]     = ",",
+  [TOKEN_PERIOD]    = ".",
+  [TOKEN_COLON]     = ":",
+  [TOKEN_SEMI]      = ";",
+  [TOKEN_ASSIGN]    = "=",
+  [TOKEN_EQ]        = "==",
+  [TOKEN_NEQ]	      = "!=",
+  [TOKEN_LT]	      = "<",
+  [TOKEN_GT]	      = ">",
+  [TOKEN_LTE]       = "<=",
+  [TOKEN_GTE]       = ">=",
+  [TOKEN_EX]        = "!",
+  [TOKEN_QUESTION]  = "?",
+  [TOKEN_BAR]       = "|",
+  [TOKEN_BS]        = "\\",
+  [TOKEN_ARROW]     = "->",
+  [TOKEN_LPAREN]    = "(",
+  [TOKEN_RPAREN]    = ")",
+  [TOKEN_LET]       = "let",
+  [TOKEN_MATCH]     = "match",
+  [TOKEN_IN]        = "in",
+  [TOKEN_EOS]       = "EOS",
+};
+
+char *
+tokenfmt(Token *tk)
+{
+  switch (tk->tt) {
+    case TOKEN_ID:
+      return tk->ident;
+    case TOKEN_NAT: {
+      char *s = malloc(sizeof(char) * 64);
+      sprintf(s, "%lu", tk->nat);
+      return s;
+    }
+    default:
+      return fmt[tk->tt];
+  }
+}
+
 static void
 tokendump(Token *tk)
 {
-  static uchar *fmt[] = {
-    [TOKEN_ADD]       = "+",
-    [TOKEN_MINUS]     = "-", 
-    [TOKEN_MUL]       = "*", 
-    [TOKEN_DIV]       = "/", 
-    [TOKEN_COMMA]     = ",",
-    [TOKEN_PERIOD]    = ".",
-    [TOKEN_COLON]     = ":",
-    [TOKEN_SEMI]      = ";",
-    [TOKEN_ASSIGN]    = "=",
-    [TOKEN_EQ]        = "==",
-    [TOKEN_NEQ]	      = "!=",
-    [TOKEN_LT]	      = "<",
-    [TOKEN_GT]	      = ">",
-    [TOKEN_LTE]       = "<=",
-    [TOKEN_GTE]       = ">=",
-    [TOKEN_EX]        = "!",
-    [TOKEN_QUESTION]  = "?",
-    [TOKEN_BAR]       = "|",
-    [TOKEN_BS]        = "\\",
-    [TOKEN_ALLOW]     = "->",
-    [TOKEN_LPAREN]    = "(",
-    [TOKEN_RPAREN]    = ")",
-    [TOKEN_LET]       = "let",
-  };
-
   switch (tk->tt) {
     case TOKEN_EOS: printf("EOS"); return;
     case TOKEN_ID:  printf("ID(%s)", tk->ident); return;
@@ -308,9 +284,17 @@ static Token *
 ident(Lex *l, uchar *ident)
 {
   Token *tk;
-  tk = newtoken(TOKEN_ID);
   printf("ident is %s\n", ident);
-  // tk->ident = ident;
+  if (!strcmp(ident, "let"))
+    return newtoken(TOKEN_LET);
+  if (!strcmp(ident, "match"))
+    return newtoken(TOKEN_MATCH);
+  if (!strcmp(ident, "in"))
+    return newtoken(TOKEN_IN);
+
+  tk = newtoken(TOKEN_ID);
+  tk->ident = malloc(sizeof(char) * (strlen(ident)+1));
+  strcpy(tk->ident, ident);
   return tk;
 }
 
@@ -320,7 +304,7 @@ nat(Lex *l, uchar *n)
   Token *tk;
   tk = newtoken(TOKEN_NAT);
   printf("number is %s\n", n);
-  // tk->ident = ident;
+  tk->nat = atol(n);
   return tk;
 }
 
@@ -338,12 +322,6 @@ static Token *
 blank(Lex *l, uchar *n)
 {
   return NULL;
-}
-
-static Token *
-kwlet(Lex *l, uchar *let)
-{
-  return newtoken(TOKEN_LET);
 }
 
 static Token *
@@ -395,9 +373,9 @@ symquestion(Lex *l, uchar *_)
 }
 
 static Token *
-symallow(Lex *l, uchar *_)
+symarrow(Lex *l, uchar *_)
 {
-  return newtoken(TOKEN_ALLOW);
+  return newtoken(TOKEN_ARROW);
 }
 
 static Token *
@@ -508,8 +486,7 @@ lexinit(Lex *l)
   l->dfa = newdfa();
   listinit(&l->tk);
   defterm(l, " \n\t");
-  def(l, "let", kwlet);
-  def(l, "->", symallow);
+  def(l, "->", symarrow);
   def(l, "+", symadd);
   def(l, "-", symminus);
   def(l, "*", symmul);
@@ -525,9 +502,7 @@ lexinit(Lex *l)
   def(l, "!=", symneq);
   defr(l, "[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_][abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]*", ident);
   defr(l, "0x[0123456789abcdefABCDEF]+", hex);
-  defr(l, "0|[123456789][0123456789]+", nat);
-
-  dfastatedump(l->dfa, l->dfa->q0);
+  defr(l, "0|[123456789][0123456789]*", nat);
 }
 
 static State *
@@ -557,7 +532,7 @@ match(Lex *l)
   uchar c;
   uchar buf[128] = {0};
   int nbuf = 0;
-do {
+  do {
     c = nextch(l);
     buf[nbuf++] = c;
     // printf("ch: '%c'\n", c);

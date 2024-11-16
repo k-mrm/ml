@@ -3,6 +3,13 @@
 #include <string.h>
 #include "ml.h"
 
+void NORETURN
+panic(char *s)
+{
+  fprintf(stderr, "%s\n", s);
+  exit(1);
+}
+
 static const char *
 readfile(char *path)
 {

@@ -408,6 +408,12 @@ symneq(Lex *l, uchar *_)
   return newtoken(TOKEN_NEQ);
 }
 
+static Token *
+symbs(Lex *l, uchar *_)
+{
+  return newtoken(TOKEN_BS);
+}
+
 static void
 defterm(Lex *l, uchar *pats)
 {
@@ -500,6 +506,7 @@ lexinit(Lex *l)
   def(l, "=", symassign);
   def(l, "==", symeq);
   def(l, "!=", symneq);
+  def(l, "\\", symbs);
   defr(l, "[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_][abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]*", ident);
   defr(l, "0x[0123456789abcdefABCDEF]+", hex);
   defr(l, "0|[123456789][0123456789]*", nat);

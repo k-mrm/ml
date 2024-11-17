@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <assert.h>
 #include "ml.h"
 #include "list.h"
 
@@ -34,13 +35,9 @@ lookahead(Stream *s)
 Token *
 eat(Stream *s)
 {
-  if (eos(s)) {
-    return NULL;
-  } else {
-    Token *c = (Token*)s->cur;
-    s->cur = s->cur->next;
-    return c;
-  }
+  Token *c = (Token*)s->cur;
+  s->cur = s->cur->next;
+  return c;
 }
 
 typedef struct Parse  Parse;
@@ -48,6 +45,7 @@ typedef enum Sty      Sty;
 typedef struct S      S;
 typedef struct NT     NT;
 typedef struct T      T;
+typedef struct ParseTree ParseTree;
 
 enum Sty {
   TERM,
@@ -68,6 +66,40 @@ struct T {
   struct S s;
   TokenType tt;
 };
+
+struct ParseTree {
+  LIST(ParseTree); 
+  Sty type;
+
+  union {
+    struct {
+      Token *tk;
+    } t;
+    struct {
+      char c;
+      List *pt;
+    } nt;
+  };
+};
+
+static ParseTree *
+tparsetree(Token *tk)
+{
+  ParseTree *pt = malloc(sizeof(*pt));
+  pt->type = TERM;
+  pt->t.tk = tk;
+  return pt;
+}
+
+static ParseTree *
+ntparsetree(char c, List *p)
+{
+  ParseTree *pt = malloc(sizeof(*pt));
+  pt->type = NONTERM;
+  pt->nt.c = c;
+  pt->nt.pt = p;
+  return pt;
+}
 
 static NT *
 nt(char c)
@@ -91,14 +123,7 @@ struct Parse {
   Stream stream;
   List expr;
   List *(*lut[128])(Parse *p, Token *tk);
-};
-
-struct Expr {
-  LIST(Expr);
-
-  union {
-
-  };
+  Expr *(*p2ast[128])(Parse *p, ParseTree *pt);
 };
 
 static void
@@ -335,7 +360,7 @@ undefined(Parse *p, Token *tk)
   panic("undefined");
 }
 
-static Expr *
+static ParseTree *
 parseexpr(Parse *p, S *s, int nest)
 {
   if (s->type == TERM) {
@@ -345,8 +370,7 @@ parseexpr(Parse *p, S *s, int nest)
       for (int i = 0; i < nest*4; i++)
         printf(" ");
       printf("%s\n", tokenfmt(tk));
-      // return parsetree(tk);
-      return NULL;
+      return tparsetree(tk);
     } else {
       parseerr(p, tk);
     }
@@ -354,21 +378,37 @@ parseexpr(Parse *p, S *s, int nest)
     NT *n = (NT*)s;
     List *body = p->lut[n->c](p, lookahead(&p->stream));
     S *e;
+    List *pts = malloc(sizeof(*pts));
+    listinit(pts);
     for (int i = 0; i < nest*4; i++)
       printf(" ");
     printf("(%c\n", n->c);
     FOREACH (body, e) {
-      parseexpr(p, e, nest+1);
+      ParseTree *pt = parseexpr(p, e, nest+1);
+      PUSH(pts, pt);
     }
     for (int i = 0; i < nest*4; i++)
       printf(" ");
     printf(")\n");
-    return NULL;
+    return ntparsetree(n->c, pts);
   } else {
     panic("unreachable");
   }
 }
 
+static Expr *ep2ast(ParseTree *pt);
+static Expr *tp2ast(ParseTree *pt);
+
+/*
+ *  S -> E;
+ *  E -> L | R | TG | M
+ *  L -> let id = E in E
+ *  R -> \id -> E
+ *  T -> F H
+ *  G -> eps | +E | -E
+ *  H -> eps | *T | /T
+ *  F -> id | num | (E)
+ */
 static void
 syntax(Parse *p)
 {
@@ -385,22 +425,224 @@ syntax(Parse *p)
   p->lut['F'] = flookup;
 }
 
+// L -> let id = E in E
+static Expr *
+letast(ParseTree *pt)
+{
+  Expr *let = malloc(sizeof(*let));
+  List *ptlist = pt->nt.pt;
+  let->ty = E_LET;
+  let->let.v = ((ParseTree*)SECOND(ptlist))->t.tk->ident;
+  let->let.e = ep2ast(FOURTH(ptlist));
+  let->let.ein = ep2ast(SIXTH(ptlist));
+  return let;
+}
+
+//  R -> \id -> E
+static Expr *
+lambdaast(ParseTree *pt)
+{
+  Expr *lam = malloc(sizeof(*lam));
+  List *ptlist = pt->nt.pt;
+  lam->ty = E_LAM;
+  lam->lam.v = ((ParseTree*)SECOND(ptlist))->t.tk->ident;
+  lam->lam.body = ep2ast(FOURTH(ptlist));
+  return lam;
+}
+
+static Expr *
+binast(BinOp op, Expr *l, Expr *r)
+{
+  Expr *bin = malloc(sizeof(*bin));
+  bin->ty = E_BIN;
+  bin->b.op = op;
+  bin->b.l = l;
+  bin->b.r = r;
+  return bin;
+}
+
+static Expr *
+idast(char *v)
+{
+  Expr *e = malloc(sizeof(*e));
+  e->ty = E_ID;
+  e->id.v = v;
+  return e;
+}
+
+static Expr *
+natast(ulong nat)
+{
+  Expr *n = malloc(sizeof(*n));
+  n->ty = E_NAT;
+  n->n.nat = nat;
+  return n;
+}
+
+// G -> eps | +E | -E
+static Expr *
+gp2ast(ParseTree *pt, Expr *e1)
+{
+  ParseTree *f;
+  Expr *e2;
+  if (EMPTY(pt->nt.pt))
+    return e1;
+
+  f = FIRST(pt->nt.pt);
+  e2 = ep2ast(SECOND(pt->nt.pt));
+  switch (f->t.tk->tt) {
+    case TOKEN_ADD:
+      return binast(BIN_ADD, e1, e2);
+    case TOKEN_MINUS:
+      return binast(BIN_MINUS, e1, e2);
+    default:
+      panic("bug");
+  }
+}
+
+// F -> id | num | (E)
+static Expr *
+fp2ast(ParseTree *pt)
+{
+  ParseTree *f = FIRST(pt->nt.pt);
+  switch (f->t.tk->tt) {
+    case TOKEN_ID: return idast(f->t.tk->ident);
+    case TOKEN_NAT: return natast(f->t.tk->nat);
+    case TOKEN_LPAREN: return ep2ast(SECOND(pt->nt.pt));
+    default: panic("bug");
+  }
+}
+
+// H -> eps | *T | /T
+static Expr *
+hp2ast(ParseTree *pt, Expr *e1)
+{
+  ParseTree *f;
+  Expr *e2;
+  if (EMPTY(pt->nt.pt))
+    return e1;
+
+  f = FIRST(pt->nt.pt);
+  e2 = tp2ast(SECOND(pt->nt.pt));
+  switch (f->t.tk->tt) {
+    case TOKEN_MUL:
+      return binast(BIN_MUL, e1, e2);
+    case TOKEN_DIV:
+      return binast(BIN_DIV, e1, e2);
+    default:
+      panic("bug");
+  }
+}
+
+// T -> F H
+static Expr *
+tp2ast(ParseTree *pt)
+{
+  Expr *e1 = fp2ast(FIRST(pt->nt.pt));
+  return hp2ast(SECOND(pt->nt.pt), e1);
+}
+
+// E -> L | R | TG | M
+static Expr *
+ep2ast(ParseTree *pt)
+{
+  ParseTree *f = FIRST(pt->nt.pt);
+  switch (f->nt.c) {
+    case 'L':
+      return letast(f);
+    case 'R':
+      return lambdaast(f);
+    case 'T': {
+      Expr *e1 = tp2ast(f);
+      return gp2ast(SECOND(pt->nt.pt), e1);
+    }
+    case 'M': // unimpl
+    default:
+      panic("ep2ast");
+  }
+}
+
+//  S -> E;
+static Expr *
+sp2ast(ParseTree *pt)
+{
+  List *ptlist = pt->nt.pt;
+  return ep2ast(FIRST(ptlist));
+}
+
+static void
+exprdump(Expr *e, int nest)
+{
+  for (int i = 0; i < nest*2; i++)
+    printf(" ");
+
+  switch (e->ty) {
+    case E_NAT: printf("(%lu)\n", e->n.nat); break;
+    case E_ID:  printf("(%s)\n", e->id.v); break;
+    case E_BIN:
+      printf("(%c \n", e->b.op);
+      exprdump(e->b.l, nest+1);
+      exprdump(e->b.r, nest+1);
+      for (int i = 0; i < nest*2; i++)
+        printf(" ");
+      printf(")\n");
+      break;
+    case E_LET:
+      printf("(let %s = \n", e->let.v);
+      exprdump(e->let.e, nest+1);
+      for (int i = 0; i < nest*2; i++)
+        printf(" ");
+      printf("in\n");
+      exprdump(e->let.ein, nest+1);
+      for (int i = 0; i < nest*2; i++)
+        printf(" ");
+      printf(")\n");
+      break;
+    case E_LAM:
+      printf("(\\%s -> \n", e->lam.v);
+      exprdump(e->lam.body, nest+1);
+      for (int i = 0; i < nest*2; i++)
+        printf(" ");
+      printf(")\n");
+      break;
+  }
+}
+
+static List *
+ast(List *ptlist)
+{
+  List *expr = malloc(sizeof(*expr));
+  listinit(expr);
+  ParseTree *pt;
+  Expr *e;
+
+  FOREACH (ptlist, pt) {
+    e = sp2ast(pt);
+    PUSH(expr, e);
+  }
+
+  FOREACH (expr, e) {
+    exprdump(e, 0);
+  }
+
+  return expr;
+}
+
 List *
 parse(List *tk)
 {
   Parse *p = malloc(sizeof(*p));
-  if (!p)
-    return NULL;
+  List *pts = malloc(sizeof(*pts));
   initstream(&p->stream, tk);
-  listinit(&p->expr);
+  listinit(pts);
   
   syntax(p);
 
   printf("\n");
   while (!eos(&p->stream)) {
-    Expr *e = parseexpr(p, (S*)nt('S'), 0);
-    // PUSH(&p->expr, e);
+    ParseTree *pt = parseexpr(p, (S*)nt('S'), 0);
+    PUSH(pts, pt);
   }
 
-  return &p->expr;
+  return ast(pts);
 }

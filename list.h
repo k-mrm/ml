@@ -22,6 +22,16 @@ struct List {
     } \
   } while(0)
 
+// LOL
+#define FIRST(_head)  ((_head)->next)
+#define SECOND(_head) (((List*)((_head)->next))->next)
+#define THIRD(_head)  (((List*)(SECOND(_head)))->next)
+#define FOURTH(_head) (((List*)(THIRD(_head)))->next)
+#define FIFTH(_head)  (((List*)(FOURTH(_head)))->next)
+#define SIXTH(_head)  (((List*)(FIFTH(_head)))->next)
+#define NEXT(_v)      ((_v)->next)
+#define EMPTY(_head)  ((_head)->next == (_head))
+
 #define PUSH(_head, _v) \
   do {  \
     SAN(_head);  \

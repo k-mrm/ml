@@ -8,6 +8,8 @@
 typedef enum TokenType  TokenType;
 typedef struct Token  Token;
 typedef struct Expr   Expr;
+typedef enum ExprType ExprType;
+typedef enum BinOp    BinOp;
 
 typedef unsigned char   uchar;
 typedef unsigned int    uint;
@@ -57,6 +59,48 @@ struct Token {
   };
   int line;
 };
+
+enum BinOp {
+  BIN_ADD   = '+',
+  BIN_MINUS = '-',
+  BIN_MUL   = '*',
+  BIN_DIV   = '/',
+};
+
+enum ExprType {
+  E_NAT,
+  E_ID,
+  E_BIN,
+  E_LET,
+  E_LAM,
+};
+
+struct Expr {
+  LIST(Expr);
+  ExprType ty;
+
+  union {
+    struct {
+      ulong nat;
+    } n;
+    struct {
+      char *v; 
+    } id;
+    struct {
+      BinOp op;
+      Expr *l, *r;
+    } b;
+    struct {
+      char *v;
+      Expr *e, *ein;
+    } let;
+    struct {
+      char *v;
+      Expr *body;
+    } lam;
+  };
+};
+
 
 void panic(char *s) NORETURN;
 char *tokenfmt(Token *tk);

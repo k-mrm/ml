@@ -5,5 +5,5 @@
 List *
 analyze(List *e)
 {
-  return NULL;
+  return e;
 }

@@ -65,6 +65,7 @@ enum BinOp {
   BIN_MINUS = '-',
   BIN_MUL   = '*',
   BIN_DIV   = '/',
+  BIN_CALL  = '.',
 };
 
 enum ExprType {
@@ -100,7 +101,6 @@ struct Expr {
     } lam;
   };
 };
-
 
 void panic(char *s) NORETURN;
 char *tokenfmt(Token *tk);

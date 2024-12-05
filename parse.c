@@ -133,11 +133,12 @@ parseerr(Parse *p, Token *tk)
   exit(1);
 }
 
+//  S -> E;
 static List *
-slookup(Parse *p, Token *tk)
+slookup (Parse *p, Token *tk)
 {
-  List *r = malloc(sizeof(*r));
-  listinit(r);
+  List *r = malloc (sizeof(*r));
+  listinit (r);
 
   switch (tk->tt) {
     case TOKEN_LET:
@@ -146,27 +147,28 @@ slookup(Parse *p, Token *tk)
     case TOKEN_NAT:
     case TOKEN_LPAREN:
     case TOKEN_BS: {
-      S *a = (S*)nt('E');
-      S *b = (S*)t(TOKEN_SEMI);
-      PUSH(r, a);
-      PUSH(r, b);
+      S *a = (S*)nt ('E');
+      S *b = (S*)t (TOKEN_SEMI);
+      PUSH (r, a);
+      PUSH (r, b);
       return r;
     }
     default:
-      parseerr(p, tk);
+      parseerr (p, tk);
   }
 }
 
+//  E -> L | R | A G | M
 static List *
 elookup(Parse *p, Token *tk)
 {
-  List *r = malloc(sizeof(*r));
-  listinit(r);
+  List *r = malloc (sizeof(*r));
+  listinit (r);
 
   switch (tk->tt) {
     case TOKEN_LET: {
-      S *l = (S*)nt('L');
-      PUSH(r, l);
+      S *l = (S*)nt ('L');
+      PUSH (r, l);
       return r;
     }
     case TOKEN_MATCH:
@@ -174,22 +176,23 @@ elookup(Parse *p, Token *tk)
     case TOKEN_ID:
     case TOKEN_NAT:
     case TOKEN_LPAREN: {
-      S *tt = (S*)nt('T');
-      S *g = (S*)nt('G');
-      PUSH(r, tt);
-      PUSH(r, g);
+      S *a = (S*)nt ('A');
+      S *g = (S*)nt ('G');
+      PUSH (r, a);
+      PUSH (r, g);
       return r;
     }
     case TOKEN_BS: {
-      S *lambda = (S*)nt('R');
-      PUSH(r, lambda);
+      S *lambda = (S*)nt ('R');
+      PUSH (r, lambda);
       return r;
     }
     default:
-      parseerr(p, tk);
+      parseerr (p, tk);
   }
 }
 
+//  L -> let id = E in E
 static List *
 letlookup(Parse *p, Token *tk)
 {
@@ -217,6 +220,7 @@ letlookup(Parse *p, Token *tk)
   }
 }
 
+//  R -> \id -> E
 static List *
 lambdalookup(Parse *p, Token *tk)
 {
@@ -240,27 +244,29 @@ lambdalookup(Parse *p, Token *tk)
   }
 }
 
+//  T -> F H
 static List *
 tlookup(Parse *p, Token *tk)
 {
-  List *r = malloc(sizeof(*r));
-  listinit(r);
+  List *r = malloc (sizeof(*r));
+  listinit (r);
 
   switch (tk->tt) {
     case TOKEN_ID:
     case TOKEN_NAT:
     case TOKEN_LPAREN: {
-      S *f = (S*)nt('F');
-      S *h = (S*)nt('H');
-      PUSH(r, f);
-      PUSH(r, h);
+      S *f = (S*)nt ('F');
+      S *h = (S*)nt ('H');
+      PUSH (r, f);
+      PUSH (r, h);
       return r;
     }
     default:
-      parseerr(p, tk);
+      parseerr (p, tk);
   }
 }
 
+//  H -> eps | *T | /T
 static List *
 hlookup(Parse *p, Token *tk)
 {
@@ -270,6 +276,7 @@ hlookup(Parse *p, Token *tk)
   switch (tk->tt) {
     case TOKEN_ADD:
     case TOKEN_MINUS:
+    case TOKEN_PERIOD:
     case TOKEN_RPAREN:
     case TOKEN_SEMI:
     case TOKEN_IN:
@@ -293,25 +300,73 @@ hlookup(Parse *p, Token *tk)
   }
 }
 
+//  A -> T B
 static List *
-glookup(Parse *p, Token *tk)
+alookup (Parse *p, Token *tk)
 {
-  List *r = malloc(sizeof(*r));
-  listinit(r);
+  List *r = malloc (sizeof(*r));
+  listinit (r);
+
+  switch (tk->tt) {
+    case TOKEN_ID:
+    case TOKEN_NAT:
+    case TOKEN_LPAREN: {
+      S *t = (S*)nt ('T');
+      S *b = (S*)nt ('B');
+      PUSH (r, t);
+      PUSH (r, b);
+      return r;
+    }
+    default:
+      parseerr (p, tk);
+  }
+}
+
+//  B -> eps | +A | -A
+static List *
+blookup (Parse *p, Token *tk)
+{
+  List *r = malloc (sizeof(*r));
+  listinit (r);
 
   switch (tk->tt) {
     case TOKEN_ADD: {
-      S *a = (S*)t(TOKEN_ADD);
-      S *e = (S*)nt('E');
+      S *a = (S*)t (TOKEN_ADD);
+      S *e = (S*)nt ('A');
       PUSH(r, a);
       PUSH(r, e);
       return r;
     }
     case TOKEN_MINUS: {
-      S *m = (S*)t(TOKEN_MINUS);
-      S *e = (S*)nt('E');
+      S *m = (S*)t (TOKEN_MINUS);
+      S *e = (S*)nt ('A');
       PUSH(r, m);
       PUSH(r, e);
+      return r;
+    }
+    case TOKEN_PERIOD:
+    case TOKEN_RPAREN:
+    case TOKEN_SEMI:
+    case TOKEN_IN:
+      return r;
+    default:
+      parseerr (p, tk);
+  }
+}
+
+//  G -> eps | .E
+static List *
+glookup(Parse *p, Token *tk)
+{
+  List *r = malloc (sizeof(*r));
+  listinit (r);
+
+  switch (tk->tt) {
+    case TOKEN_PERIOD: {
+      S *d = (S*)t (TOKEN_PERIOD);
+      S *e = (S*)nt ('E');
+      PUSH (r, d);
+      PUSH (r, e);
       return r;
     }
     case TOKEN_RPAREN:
@@ -319,38 +374,39 @@ glookup(Parse *p, Token *tk)
     case TOKEN_IN:
       return r;
     default:
-      parseerr(p, tk);
+      parseerr (p, tk);
   }
 }
 
+//  F -> id | num | (E)
 static List *
-flookup(Parse *p, Token *tk)
+flookup (Parse *p, Token *tk)
 {
-  List *r = malloc(sizeof(*r));
-  listinit(r);
+  List *r = malloc (sizeof(*r));
+  listinit (r);
 
   switch (tk->tt) {
     case TOKEN_ID: {
-      S *id = (S*)t(TOKEN_ID);
-      PUSH(r, id);
+      S *id = (S*)t (TOKEN_ID);
+      PUSH (r, id);
       return r;
     }
     case TOKEN_NAT: {
-      S *nat = (S*)t(TOKEN_NAT);
-      PUSH(r, nat);
+      S *nat = (S*)t (TOKEN_NAT);
+      PUSH (r, nat);
       return r;
     }
     case TOKEN_LPAREN: {
-      S *lp = (S*)t(TOKEN_LPAREN);
-      S *e = (S*)nt('E');
-      S *rp = (S*)t(TOKEN_RPAREN);
-      PUSH(r, lp);
-      PUSH(r, e);
-      PUSH(r, rp);
+      S *lp = (S*)t (TOKEN_LPAREN);
+      S *e = (S*)nt ('E');
+      S *rp = (S*)t (TOKEN_RPAREN);
+      PUSH (r, lp);
+      PUSH (r, e);
+      PUSH (r, rp);
       return r;
     }
     default:
-      parseerr(p, tk);
+      parseerr (p, tk);
   }
 }
 
@@ -396,16 +452,19 @@ parseexpr(Parse *p, S *s, int nest)
   }
 }
 
+static Expr *ap2ast(ParseTree *pt);
 static Expr *ep2ast(ParseTree *pt);
 static Expr *tp2ast(ParseTree *pt);
 
 /*
  *  S -> E;
- *  E -> L | R | TG | M
+ *  E -> L | R | A G | M
  *  L -> let id = E in E
  *  R -> \id -> E
+ *  G -> eps | .E
+ *  A -> T B
+ *  B -> eps | +A | -A
  *  T -> F H
- *  G -> eps | +E | -E
  *  H -> eps | *T | /T
  *  F -> id | num | (E)
  */
@@ -419,9 +478,11 @@ syntax(Parse *p)
   p->lut['E'] = elookup;
   p->lut['L'] = letlookup;
   p->lut['R'] = lambdalookup;
+  p->lut['G'] = glookup;
+  p->lut['A'] = alookup;
+  p->lut['B'] = blookup;
   p->lut['T'] = tlookup;
   p->lut['H'] = hlookup;
-  p->lut['G'] = glookup;
   p->lut['F'] = flookup;
 }
 
@@ -479,9 +540,9 @@ natast(ulong nat)
   return n;
 }
 
-// G -> eps | +E | -E
+//  G -> eps | .E
 static Expr *
-gp2ast(ParseTree *pt, Expr *e1)
+gp2ast (ParseTree *pt, Expr *e1)
 {
   ParseTree *f;
   Expr *e2;
@@ -490,6 +551,25 @@ gp2ast(ParseTree *pt, Expr *e1)
 
   f = FIRST(pt->nt.pt);
   e2 = ep2ast(SECOND(pt->nt.pt));
+  switch (f->t.tk->tt) {
+    case TOKEN_PERIOD:
+      return binast(BIN_CALL, e1, e2);
+    default:
+      panic("bug");
+  }
+}
+
+//  B -> eps | +A | -A
+static Expr *
+bp2ast (ParseTree *pt, Expr *e1)
+{
+  ParseTree *f;
+  Expr *e2;
+  if (EMPTY(pt->nt.pt))
+    return e1;
+
+  f = FIRST(pt->nt.pt);
+  e2 = ap2ast(SECOND(pt->nt.pt));
   switch (f->t.tk->tt) {
     case TOKEN_ADD:
       return binast(BIN_ADD, e1, e2);
@@ -500,7 +580,7 @@ gp2ast(ParseTree *pt, Expr *e1)
   }
 }
 
-// F -> id | num | (E)
+//  F -> id | num | (E)
 static Expr *
 fp2ast(ParseTree *pt)
 {
@@ -513,7 +593,7 @@ fp2ast(ParseTree *pt)
   }
 }
 
-// H -> eps | *T | /T
+//  H -> eps | *T | /T
 static Expr *
 hp2ast(ParseTree *pt, Expr *e1)
 {
@@ -534,7 +614,7 @@ hp2ast(ParseTree *pt, Expr *e1)
   }
 }
 
-// T -> F H
+//  T -> F H
 static Expr *
 tp2ast(ParseTree *pt)
 {
@@ -542,7 +622,15 @@ tp2ast(ParseTree *pt)
   return hp2ast(SECOND(pt->nt.pt), e1);
 }
 
-// E -> L | R | TG | M
+//  A -> T B
+static Expr *
+ap2ast (ParseTree *pt)
+{
+  Expr *e1 = tp2ast(FIRST(pt->nt.pt));
+  return bp2ast(SECOND(pt->nt.pt), e1);
+}
+
+//  E -> L | R | A G | M
 static Expr *
 ep2ast(ParseTree *pt)
 {
@@ -552,8 +640,8 @@ ep2ast(ParseTree *pt)
       return letast(f);
     case 'R':
       return lambdaast(f);
-    case 'T': {
-      Expr *e1 = tp2ast(f);
+    case 'A': {
+      Expr *e1 = ap2ast(f);
       return gp2ast(SECOND(pt->nt.pt), e1);
     }
     case 'M': // unimpl

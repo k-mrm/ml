@@ -373,6 +373,12 @@ symquestion(Lex *l, uchar *_)
 }
 
 static Token *
+symdot (Lex *l, uchar *_)
+{
+  return newtoken (TOKEN_PERIOD);
+}
+
+static Token *
 symarrow(Lex *l, uchar *_)
 {
   return newtoken(TOKEN_ARROW);
@@ -499,6 +505,7 @@ lexinit(Lex *l)
   def(l, "/", symdiv);
   def(l, "!", symex);
   def(l, "?", symquestion);
+  def(l, ".", symdot);
   def(l, ":", symcolon);
   def(l, ";", symsemi);
   def(l, "(", symlparen);
@@ -507,7 +514,7 @@ lexinit(Lex *l)
   def(l, "==", symeq);
   def(l, "!=", symneq);
   def(l, "\\", symbs);
-  defr(l, "[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_][abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]*", ident);
+  defr(l, "[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_][abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_']*", ident);
   defr(l, "0x[0123456789abcdefABCDEF]+", hex);
   defr(l, "0|[123456789][0123456789]*", nat);
 }

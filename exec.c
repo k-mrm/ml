@@ -99,7 +99,6 @@ vdiv (Value *l, Value *r)
 static Value *
 vcall (Value *l, Value *r)
 {
-  printf("vcall %s(%s)\n", l->tostring(l), r->tostring(r));
   char *a = l->lam.v;
   Expr *body = l->lam.e;
   Env *env = l->lam.env;

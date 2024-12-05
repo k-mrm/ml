@@ -19,3 +19,22 @@ intvalue (long long n)
   v->n.num = n;
   return v;
 }
+
+static const char *
+l2s (Value *v)
+{
+  char *s = malloc (64);
+  sprintf (s, "lambda \%s -> %p", v->lam.v, v->lam.e);
+  return s;
+}
+
+Value *
+lamvalue (Env *env, char *id, Expr *e)
+{
+  Value *v = malloc (sizeof *v);
+  v->tostring = l2s;
+  v->lam.v = id;
+  v->lam.e = e;
+  v->lam.env = env;
+  return v;
+}

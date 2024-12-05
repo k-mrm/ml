@@ -10,6 +10,7 @@ typedef struct Token  Token;
 typedef struct Expr   Expr;
 typedef enum ExprType ExprType;
 typedef enum BinOp    BinOp;
+typedef struct Env    Env;
 
 typedef unsigned char   uchar;
 typedef unsigned int    uint;
@@ -86,6 +87,7 @@ struct Expr {
     } n;
     struct {
       char *v; 
+      Expr *inst;
     } id;
     struct {
       BinOp op;
@@ -100,6 +102,11 @@ struct Expr {
       Expr *body;
     } lam;
   };
+};
+
+struct Env {
+  Env *par;
+  List *map;
 };
 
 void panic(char *s) NORETURN;

@@ -528,6 +528,7 @@ idast(char *v)
   Expr *e = malloc(sizeof(*e));
   e->ty = E_ID;
   e->id.v = v;
+  e->id.inst = NULL;
   return e;
 }
 

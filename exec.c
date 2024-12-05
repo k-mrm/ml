@@ -5,7 +5,6 @@
 #include "list.h"
 #include "value.h"
 
-typedef struct Env    Env;
 typedef struct Map    Map;
 
 struct Map {
@@ -13,11 +12,6 @@ struct Map {
 
   char *id;
   Value *v;
-};
-
-struct Env {
-  Env *par;
-  List *map;
 };
 
 static Value *execexpr (Env *env, Expr *e);
@@ -40,10 +34,20 @@ envlookup (Env *env, char *id)
 static void
 envreg (Env *env, char *id, Value *v)
 {
-  Map *m = malloc (sizeof *m);
+  Map *m;
+  FOREACH (env->map, m) {
+    if (strcmp (id, m->id) == 0)
+      goto rewrite;
+  }
+
+  m = malloc (sizeof *m);
   m->id = id;
   m->v = v;
   PUSH (env->map, m);
+  return;
+
+rewrite:
+  m->v = v;
 }
 
 static Env *
@@ -59,7 +63,7 @@ emptyenv (Env *parent)
 static Value *
 natexpr (Env *env, Expr *e)
 {
-  return (Value*)intvalue (e->n.nat);
+  return intvalue (e->n.nat);
 }
 
 static Value *
@@ -93,6 +97,18 @@ vdiv (Value *l, Value *r)
 }
 
 static Value *
+vcall (Value *l, Value *r)
+{
+  printf("vcall %s(%s)\n", l->tostring(l), r->tostring(r));
+  char *a = l->lam.v;
+  Expr *body = l->lam.e;
+  Env *env = l->lam.env;
+  Env *new = emptyenv (env);
+  envreg (new, a, r);
+  return execexpr (new, body);
+}
+
+static Value *
 binexpr (Env *env, Expr *e)
 {
   Value *lv = execexpr (env, e->b.l);
@@ -103,6 +119,7 @@ binexpr (Env *env, Expr *e)
     case BIN_MINUS: return vsub (lv, rv);
     case BIN_MUL: return vmul (lv, rv);
     case BIN_DIV: return vdiv (lv, rv);
+    case BIN_CALL: return vcall (lv, rv);
   }
 }
 
@@ -119,7 +136,7 @@ letexpr (Env *env, Expr *e)
 static Value *
 lamexpr (Env *env, Expr *e)
 {
-  ;
+  return lamvalue (env, e->lam.v, e->lam.body);
 }
 
 static Value *

@@ -25,12 +25,14 @@ let c = 114 in
 let True = \x -> \y -> x in True;
 let False = \x -> \y -> y in False;
 
-let a = \n -> n + 10 in a;
 let f = \n -> n + 10 in f.20;
 let f' = \x -> \y -> x+y in f'.20;
 let f' = \x -> \y -> x+y in (f'.20).120;
+
+let a = \n -> n + 10 in a;
 let g' = \x -> \y -> \z -> x - y * z in g';
 let h' = g'.10 in h';
 let z' = h'.20 in z';
 z'.30;
 z'.40;
+z'.a.40;

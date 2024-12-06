@@ -42,6 +42,19 @@ struct List {
     _p->next = (_v);  \
   } while (0)
 
+static inline int
+length (List *head)
+{
+  struct dummy {
+    LIST(struct dummy);
+  } *dum;
+  List *v;
+  int i = 0;
+  FOREACH (head, dum)
+    i++;
+  return i;
+}
+
 static void
 listinit(List *l)
 {

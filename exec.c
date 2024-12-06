@@ -69,7 +69,11 @@ natexpr (Env *env, Expr *e)
 static Value *
 idexpr (Env *env, Expr *e)
 {
-  return envlookup (env, e->id.v);
+  Value *v = envlookup (env, e->id.v);
+  if (!v) {
+    panic("unknown var");
+  } 
+  return v;
 }
 
 static Value *
@@ -189,16 +193,15 @@ exprdump(Expr *e, int nest)
   }
 }
 
-
 int
 exec(List *elist)
 {
   Expr *e;
   Env *env = emptyenv (NULL);
   Value *v;
-
   FOREACH (elist, e) {
     v = execexpr (env, e);
     printf ("%s\n", v->tostring (v));
   }
+  return 0;
 }

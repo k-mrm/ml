@@ -542,40 +542,58 @@ natast(ulong nat)
 }
 
 //  G -> eps | .E
+//  E -> L | R | A G | M
 static Expr *
 gp2ast (ParseTree *pt, Expr *e1)
 {
   ParseTree *f;
+  ParseTree *e;
   Expr *e2;
-  if (EMPTY(pt->nt.pt))
+  if (EMPTY (pt->nt.pt))
     return e1;
 
-  f = FIRST(pt->nt.pt);
-  e2 = ep2ast(SECOND(pt->nt.pt));
-  switch (f->t.tk->tt) {
-    case TOKEN_PERIOD:
-      return binast(BIN_CALL, e1, e2);
-    default:
-      panic("bug");
+  f = FIRST (pt->nt.pt);
+  e = SECOND (pt->nt.pt);
+
+  if (length (e->nt.pt) == 1) {
+    e2 = ep2ast (e);
+    switch (f->t.tk->tt) {
+      case TOKEN_PERIOD:
+        return binast (BIN_CALL, e1, e2);
+      default:
+        panic ("bug");
+    }
+  } else if (length (e->nt.pt) == 2) {
+    e2 = ap2ast (FIRST (e->nt.pt));
+    switch (f->t.tk->tt) {
+      case TOKEN_PERIOD:
+        return gp2ast (SECOND (e->nt.pt), binast (BIN_CALL, e1, e2));
+      default:
+        panic ("bug");
+    }
   }
 }
 
 //  B -> eps | +A | -A
+//  A -> T B
 static Expr *
 bp2ast (ParseTree *pt, Expr *e1)
 {
   ParseTree *f;
+  ParseTree *a;
   Expr *e2;
-  if (EMPTY(pt->nt.pt))
+  if (EMPTY (pt->nt.pt))
     return e1;
 
-  f = FIRST(pt->nt.pt);
-  e2 = ap2ast(SECOND(pt->nt.pt));
+  f = FIRST (pt->nt.pt);
+  a = SECOND (pt->nt.pt);
+
+  e2 = tp2ast (FIRST (a->nt.pt));
   switch (f->t.tk->tt) {
     case TOKEN_ADD:
-      return binast(BIN_ADD, e1, e2);
+      return bp2ast (SECOND (a->nt.pt), binast (BIN_ADD, e1, e2));
     case TOKEN_MINUS:
-      return binast(BIN_MINUS, e1, e2);
+      return bp2ast (SECOND (a->nt.pt), binast (BIN_MINUS, e1, e2));
     default:
       panic("bug");
   }
@@ -595,21 +613,25 @@ fp2ast(ParseTree *pt)
 }
 
 //  H -> eps | *T | /T
+//  T -> F H
 static Expr *
 hp2ast(ParseTree *pt, Expr *e1)
 {
   ParseTree *f;
+  ParseTree *t;
   Expr *e2;
   if (EMPTY(pt->nt.pt))
     return e1;
 
-  f = FIRST(pt->nt.pt);
-  e2 = tp2ast(SECOND(pt->nt.pt));
+  f = FIRST (pt->nt.pt);
+  t = SECOND (pt->nt.pt);
+
+  e2 = fp2ast (FIRST (t->nt.pt));
   switch (f->t.tk->tt) {
     case TOKEN_MUL:
-      return binast(BIN_MUL, e1, e2);
+      return hp2ast (SECOND (t->nt.pt), binast (BIN_MUL, e1, e2));
     case TOKEN_DIV:
-      return binast(BIN_DIV, e1, e2);
+      return hp2ast (SECOND (t->nt.pt), binast (BIN_DIV, e1, e2));
     default:
       panic("bug");
   }

@@ -2,10 +2,6 @@ let a' = 10 in
 let b' = 10 in
   a' + b' * a' - b';
 
-let a' = 10 in
-let b' = 20 in
-  a' + b' * (a' - b');
-
 let b' = 200 in b';
 
 a';
@@ -17,7 +13,7 @@ let a = 810 in
 
 let a = 10 in
 let a = 810 in
-  (a - a') - b';
+  a - (a' - b');
 
 let c = 114 in
   c + a;
@@ -35,4 +31,6 @@ let h' = g'.10 in h';
 let z' = h'.20 in z';
 z'.30;
 z'.40;
-z'.a.40;
+z'.(a.40);
+
+g'.10.20.30;

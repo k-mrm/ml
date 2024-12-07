@@ -1,12 +1,16 @@
 #ifndef _ML_VALUE_H
 #define _ML_VALUE_H
 
+#include <stdbool.h>
 #include "ml.h"
+#include "list.h"
 
 typedef struct Value    Value;
 
 struct Value {
-  const char *(*tostring)(Value *);
+  LIST (Value);
+  const char *(*tostring) (Value *);
+  bool (*eq) (Value *, Value *);
 
   union {
     struct {
@@ -17,6 +21,9 @@ struct Value {
       Env *env;
       Expr *e;
     } lam;
+    struct {
+
+    } ls;
   };
 };
 

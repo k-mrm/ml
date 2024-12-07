@@ -69,11 +69,7 @@ natexpr (Env *env, Expr *e)
 static Value *
 idexpr (Env *env, Expr *e)
 {
-  Value *v = envlookup (env, e->id.v);
-  if (!v) {
-    panic("unknown var");
-  } 
-  return v;
+  return envlookup (env, e->id.v);
 }
 
 static Value *
@@ -143,6 +139,21 @@ lamexpr (Env *env, Expr *e)
 }
 
 static Value *
+matexpr (Env *env, Expr *e)
+{
+  Expr *b;
+  Value *mat = execexpr (env, e->mat.e);
+
+  FOREACH (e->mat.block, b) {
+    Value *c = execexpr (env, b->mb.match);
+
+    if (!c || mat->eq (mat, c))
+      return execexpr (env, b->mb.ret);
+  }
+  return NULL;
+}
+
+static Value *
 execexpr (Env *env, Expr *e)
 {
   switch (e->ty) {
@@ -151,46 +162,9 @@ execexpr (Env *env, Expr *e)
     case E_BIN: return binexpr (env, e);
     case E_LET: return letexpr (env, e);
     case E_LAM: return lamexpr (env, e);
+    case E_MAT: return matexpr (env, e);
   }
   return NULL;
-}
-
-static void
-exprdump(Expr *e, int nest)
-{
-  for (int i = 0; i < nest*2; i++)
-    printf(" ");
-
-  switch (e->ty) {
-    case E_NAT: printf("(%lu)\n", e->n.nat); break;
-    case E_ID:  printf("(%s)\n", e->id.v); break;
-    case E_BIN:
-      printf("(%c \n", e->b.op);
-      exprdump(e->b.l, nest+1);
-      exprdump(e->b.r, nest+1);
-      for (int i = 0; i < nest*2; i++)
-        printf(" ");
-      printf(")\n");
-      break;
-    case E_LET:
-      printf("(let %s = \n", e->let.v);
-      exprdump(e->let.e, nest+1);
-      for (int i = 0; i < nest*2; i++)
-        printf(" ");
-      printf("in\n");
-      exprdump(e->let.ein, nest+1);
-      for (int i = 0; i < nest*2; i++)
-        printf(" ");
-      printf(")\n");
-      break;
-    case E_LAM:
-      printf("(\\%s -> \n", e->lam.v);
-      exprdump(e->lam.body, nest+1);
-      for (int i = 0; i < nest*2; i++)
-        printf(" ");
-      printf(")\n");
-      break;
-  }
 }
 
 int

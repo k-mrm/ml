@@ -74,8 +74,12 @@ static uchar *fmt[] = {
   [TOKEN_BAR]       = "|",
   [TOKEN_BS]        = "\\",
   [TOKEN_ARROW]     = "->",
+  [TOKEN_FATARROW]  = "=>",
+  [TOKEN_BAR]       = "|",
   [TOKEN_LPAREN]    = "(",
   [TOKEN_RPAREN]    = ")",
+  [TOKEN_LBRACE]    = "{",
+  [TOKEN_RBRACE]    = "}",
   [TOKEN_LET]       = "let",
   [TOKEN_MATCH]     = "match",
   [TOKEN_IN]        = "in",
@@ -415,9 +419,33 @@ symneq(Lex *l, uchar *_)
 }
 
 static Token *
+symfatarr (Lex *l, uchar *_)
+{
+  return newtoken (TOKEN_FATARROW);
+}
+
+static Token *
+symbar (Lex *l, uchar *_)
+{
+  return newtoken (TOKEN_BAR);
+}
+
+static Token *
 symbs(Lex *l, uchar *_)
 {
   return newtoken(TOKEN_BS);
+}
+
+static Token *
+symlbrace (Lex *l, uchar *_)
+{
+  return newtoken (TOKEN_LBRACE);
+}
+
+static Token *
+symrbrace (Lex *l, uchar *_)
+{
+  return newtoken (TOKEN_RBRACE);
 }
 
 static void
@@ -512,7 +540,11 @@ lexinit(Lex *l)
   def(l, ")", symrparen);
   def(l, "=", symassign);
   def(l, "==", symeq);
+  def(l, "=>", symfatarr);
+  def(l, "|", symbar);
   def(l, "!=", symneq);
+  def(l, "{", symlbrace);
+  def(l, "}", symrbrace);
   def(l, "\\", symbs);
   defr(l, "[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_][abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_']*", ident);
   defr(l, "0x[0123456789abcdefABCDEF]+", hex);

@@ -6,6 +6,34 @@
 #include "ml.h"
 #include "list.h"
 
+/*
+ *  CFG of ml:
+ *   S ::= E ;
+ *   E ::= L
+ *   E ::= R
+ *   E ::= A G
+ *   E ::= M
+ *   L ::= let id = E in E
+ *   R ::= \ id -> E
+ *   M ::= match E { I }
+ *   I ::= E => E K
+ *   K ::= ε
+ *   K ::= | I
+ *   G ::= ε
+ *   G ::= . E
+ *   A ::= T B
+ *   B ::= ε
+ *   B ::= + A
+ *   B ::= - A
+ *   T ::= F H
+ *   H ::= ε
+ *   H ::= * T
+ *   H ::= / T
+ *   F ::= id
+ *   F ::= num
+ *   F ::= ( E )
+ */
+
 typedef struct Stream Stream;
 
 struct Stream {
@@ -171,8 +199,6 @@ elookup(Parse *p, Token *tk)
       PUSH (r, l);
       return r;
     }
-    case TOKEN_MATCH:
-      parseerr(p, tk);  // unimpl
     case TOKEN_ID:
     case TOKEN_NAT:
     case TOKEN_LPAREN: {
@@ -185,6 +211,11 @@ elookup(Parse *p, Token *tk)
     case TOKEN_BS: {
       S *lambda = (S*)nt ('R');
       PUSH (r, lambda);
+      return r;
+    }
+    case TOKEN_MATCH: {
+      S *m = (S*)nt ('M');
+      PUSH (r, m);
       return r;
     }
     default:
@@ -244,6 +275,82 @@ lambdalookup(Parse *p, Token *tk)
   }
 }
 
+//  M -> match E { I }
+static List *
+mlookup (Parse *p, Token *tk)
+{
+  List *r = malloc (sizeof (*r));
+  listinit (r);
+
+  switch (tk->tt) {
+    case TOKEN_MATCH: {
+      S *m = (S*)t (TOKEN_MATCH);
+      S *e = (S*)nt ('E');
+      S *lb = (S*)t (TOKEN_LBRACE);
+      S *i = (S*)nt ('I');
+      S *rb = (S*)t (TOKEN_RBRACE);
+      PUSH (r, m);
+      PUSH (r, e);
+      PUSH (r, lb);
+      PUSH (r, i);
+      PUSH (r, rb);
+      return r;
+    }
+    default:
+      parseerr (p, tk);
+  }
+}
+
+//  I -> E => E K
+static List *
+ilookup (Parse *p, Token *tk)
+{
+  List *r = malloc (sizeof(*r));
+  listinit (r);
+
+  switch (tk->tt) {
+    case TOKEN_LET:
+    case TOKEN_MATCH:
+    case TOKEN_ID:
+    case TOKEN_NAT:
+    case TOKEN_LPAREN:
+    case TOKEN_BS: {
+      S *e1 = (S*)nt ('E');
+      S *ar = (S*)t (TOKEN_FATARROW);
+      S *e2 = (S*)nt ('E');
+      S *k = (S*)nt ('K');
+      PUSH (r, e1);
+      PUSH (r, ar);
+      PUSH (r, e2);
+      PUSH (r, k);
+      return r;
+    }
+    default:
+      parseerr (p, tk);
+  }
+}
+
+//  K -> eps | '|' I
+static List *
+klookup (Parse *p, Token *tk)
+{
+  List *r = malloc (sizeof(*r));
+  listinit (r);
+
+  switch (tk->tt) {
+    case TOKEN_RBRACE:
+      return r;
+    case TOKEN_BAR:
+      S *b = (S*)t (TOKEN_BAR);
+      S *i = (S*)nt ('I');
+      PUSH (r, b);
+      PUSH (r, i);
+      return r;
+    default:
+      parseerr (p, tk);
+  }
+}
+
 //  T -> F H
 static List *
 tlookup(Parse *p, Token *tk)
@@ -278,6 +385,10 @@ hlookup(Parse *p, Token *tk)
     case TOKEN_MINUS:
     case TOKEN_PERIOD:
     case TOKEN_RPAREN:
+    case TOKEN_LBRACE:
+    case TOKEN_RBRACE:
+    case TOKEN_FATARROW:
+    case TOKEN_BAR:
     case TOKEN_SEMI:
     case TOKEN_IN:
       return r;
@@ -346,6 +457,10 @@ blookup (Parse *p, Token *tk)
     }
     case TOKEN_PERIOD:
     case TOKEN_RPAREN:
+    case TOKEN_LBRACE:
+    case TOKEN_RBRACE:
+    case TOKEN_FATARROW:
+    case TOKEN_BAR:
     case TOKEN_SEMI:
     case TOKEN_IN:
       return r;
@@ -370,8 +485,12 @@ glookup(Parse *p, Token *tk)
       return r;
     }
     case TOKEN_RPAREN:
+    case TOKEN_LBRACE:
+    case TOKEN_RBRACE:
     case TOKEN_SEMI:
+    case TOKEN_FATARROW:
     case TOKEN_IN:
+    case TOKEN_BAR:
       return r;
     default:
       parseerr (p, tk);
@@ -455,12 +574,16 @@ parseexpr(Parse *p, S *s, int nest)
 static Expr *ap2ast(ParseTree *pt);
 static Expr *ep2ast(ParseTree *pt);
 static Expr *tp2ast(ParseTree *pt);
+static void ip2ast (ParseTree *pt, List *block);
 
 /*
  *  S -> E;
  *  E -> L | R | A G | M
  *  L -> let id = E in E
  *  R -> \id -> E
+ *  M -> match E { I }
+ *  I -> E => E K
+ *  K -> eps | '|' I
  *  G -> eps | .E
  *  A -> T B
  *  B -> eps | +A | -A
@@ -478,6 +601,9 @@ syntax(Parse *p)
   p->lut['E'] = elookup;
   p->lut['L'] = letlookup;
   p->lut['R'] = lambdalookup;
+  p->lut['M'] = mlookup;
+  p->lut['I'] = ilookup;
+  p->lut['K'] = klookup;
   p->lut['G'] = glookup;
   p->lut['A'] = alookup;
   p->lut['B'] = blookup;
@@ -486,7 +612,7 @@ syntax(Parse *p)
   p->lut['F'] = flookup;
 }
 
-// L -> let id = E in E
+//  L -> let id = E in E
 static Expr *
 letast(ParseTree *pt)
 {
@@ -509,6 +635,43 @@ lambdaast(ParseTree *pt)
   lam->lam.v = ((ParseTree*)SECOND(ptlist))->t.tk->ident;
   lam->lam.body = ep2ast(FOURTH(ptlist));
   return lam;
+}
+
+//  K -> eps | '|' I
+static void
+kp2ast (ParseTree *pt, List *block)
+{
+  if (EMPTY (pt->nt.pt))
+    return;
+
+  ip2ast (SECOND (pt->nt.pt), block);
+}
+
+//  I -> E => E K
+static void
+ip2ast (ParseTree *pt, List *block)
+{
+  Expr *matblock = malloc (sizeof *matblock);
+  matblock->ty = E_MATBLOCK;
+  matblock->mb.match = ep2ast (FIRST (pt->nt.pt));
+  matblock->mb.ret = ep2ast (THIRD (pt->nt.pt));
+  PUSH (block, matblock);
+  kp2ast (FOURTH (pt->nt.pt), block);
+}
+
+//  M -> match E { I }
+static Expr *
+mp2ast (ParseTree *pt)
+{
+  Expr *mat = malloc (sizeof (*mat));
+
+  mat->ty = E_MAT;
+  mat->mat.e = ep2ast (SECOND (pt->nt.pt));
+  mat->mat.block = malloc (sizeof *mat->mat.block);
+  listinit (mat->mat.block);
+  ip2ast (FOURTH (pt->nt.pt), mat->mat.block);
+
+  return mat;
 }
 
 static Expr *
@@ -667,7 +830,8 @@ ep2ast(ParseTree *pt)
       Expr *e1 = ap2ast(f);
       return gp2ast(SECOND(pt->nt.pt), e1);
     }
-    case 'M': // unimpl
+    case 'M':
+      return mp2ast (f);
     default:
       panic("ep2ast");
   }
@@ -715,6 +879,22 @@ exprdump(Expr *e, int nest)
       for (int i = 0; i < nest*2; i++)
         printf(" ");
       printf(")\n");
+      break;
+    case E_MAT: {
+      Expr *b;
+      printf ("match ");
+      exprdump (e->mat.e, nest+1);
+      FOREACH (e->mat.block, b) {
+        exprdump (b, nest+1);
+      }
+      break;
+    }
+    case E_MATBLOCK:
+      exprdump (e->mb.match, nest+1);
+      for (int i = 0; i < nest*2; i++)
+        printf(" ");
+      printf (" => ");
+      exprdump (e->mb.ret, nest+1);
       break;
   }
 }

@@ -42,8 +42,11 @@ enum TokenType {
   TOKEN_BAR,    // |
   TOKEN_BS,     // `\`
   TOKEN_ARROW,  // ->
+  TOKEN_FATARROW, // =>
   TOKEN_LPAREN, // (
   TOKEN_RPAREN, // )
+  TOKEN_LBRACE, // {
+  TOKEN_RBRACE, // }
 
   TOKEN_LET,
   TOKEN_MATCH,
@@ -75,6 +78,8 @@ enum ExprType {
   E_BIN,
   E_LET,
   E_LAM,
+  E_MAT,
+  E_MATBLOCK,
 };
 
 struct Expr {
@@ -101,6 +106,14 @@ struct Expr {
       char *v;
       Expr *body;
     } lam;
+    struct {
+      Expr *e;
+      List *block;    // mb list
+    } mat;
+    struct {
+      Expr *match;
+      Expr *ret;
+    } mb;
   };
 };
 

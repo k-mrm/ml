@@ -24,7 +24,7 @@ struct List {
 
 // LOL
 #define FIRST(_head)  ((_head)->next)
-#define SECOND(_head) (((List*)((_head)->next))->next)
+#define SECOND(_head) (((List*)(FIRST(_head)))->next)
 #define THIRD(_head)  (((List*)(SECOND(_head)))->next)
 #define FOURTH(_head) (((List*)(THIRD(_head)))->next)
 #define FIFTH(_head)  (((List*)(FOURTH(_head)))->next)

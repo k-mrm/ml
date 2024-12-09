@@ -845,7 +845,7 @@ sp2ast(ParseTree *pt)
   return ep2ast(FIRST(ptlist));
 }
 
-static void
+void
 exprdump(Expr *e, int nest)
 {
   for (int i = 0; i < nest*2; i++)

@@ -56,6 +56,16 @@ length (List *head)
 }
 
 static void
+delete (void *v)
+{
+  List *lv = (List *)v;
+  List *next = lv->next;
+  List *prev = lv->prev;
+  next->prev = prev;
+  prev->next = next;
+}
+
+static void
 listinit(List *l)
 {
   l->next = l;

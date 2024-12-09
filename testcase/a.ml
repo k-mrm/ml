@@ -38,5 +38,5 @@ g'.10.20.30;
 (\x -> \y -> \z -> x * y * z).100.200.300;
 
 let add = \x -> \y -> x + y in
-let inc = add.1 in;
-  inc.(inc.(inc.(inc.(inc.0))));
+let inc = add.1 in
+inc.(inc.(inc.(inc.(inc.(inc.(inc.0))))));

@@ -16,6 +16,14 @@ typedef unsigned char   uchar;
 typedef unsigned int    uint;
 typedef unsigned long   ulong;
 
+#define ML_DEBUG
+
+#ifdef ML_DEBUG
+#define trace(...)  printf (__VA_ARGS__)
+#else
+#define trace(...)  (void)(0)
+#endif  // ML_DEBUG
+
 enum TokenType {
   TOKEN_EOS,
   TOKEN_ID,
@@ -92,7 +100,6 @@ struct Expr {
     } n;
     struct {
       char *v; 
-      Expr *inst;
     } id;
     struct {
       BinOp op;

@@ -543,8 +543,8 @@ parseexpr(Parse *p, S *s, int nest)
     Token *tk = eat(&p->stream);
     if (tk->tt == n->tt) {
       for (int i = 0; i < nest*4; i++)
-        printf(" ");
-      printf("%s\n", tokenfmt(tk));
+        trace(" ");
+      trace("%s\n", tokenfmt(tk));
       return tparsetree(tk);
     } else {
       parseerr(p, tk);
@@ -556,15 +556,15 @@ parseexpr(Parse *p, S *s, int nest)
     List *pts = malloc(sizeof(*pts));
     listinit(pts);
     for (int i = 0; i < nest*4; i++)
-      printf(" ");
-    printf("(%c\n", n->c);
+      trace(" ");
+    trace("(%c\n", n->c);
     FOREACH (body, e) {
       ParseTree *pt = parseexpr(p, e, nest+1);
       PUSH(pts, pt);
     }
     for (int i = 0; i < nest*4; i++)
-      printf(" ");
-    printf(")\n");
+      trace(" ");
+    trace(")\n");
     return ntparsetree(n->c, pts);
   } else {
     panic("unreachable");
@@ -691,7 +691,6 @@ idast(char *v)
   Expr *e = malloc(sizeof(*e));
   e->ty = E_ID;
   e->id.v = v;
-  e->id.inst = NULL;
   return e;
 }
 
@@ -849,40 +848,40 @@ void
 exprdump(Expr *e, int nest)
 {
   for (int i = 0; i < nest*2; i++)
-    printf(" ");
+    trace (" ");
 
   switch (e->ty) {
-    case E_NAT: printf("(%lu)\n", e->n.nat); break;
-    case E_ID:  printf("(%s)\n", e->id.v); break;
+    case E_NAT: trace ("(%lu)\n", e->n.nat); break;
+    case E_ID:  trace ("(%s)\n", e->id.v); break;
     case E_BIN:
-      printf("(%c \n", e->b.op);
+      trace ("(%c \n", e->b.op);
       exprdump(e->b.l, nest+1);
       exprdump(e->b.r, nest+1);
       for (int i = 0; i < nest*2; i++)
-        printf(" ");
-      printf(")\n");
+        trace (" ");
+      trace (")\n");
       break;
     case E_LET:
-      printf("(let %s = \n", e->let.v);
+      trace ("(let %s = \n", e->let.v);
       exprdump(e->let.e, nest+1);
       for (int i = 0; i < nest*2; i++)
-        printf(" ");
-      printf("in\n");
+        trace (" ");
+      trace ("in\n");
       exprdump(e->let.ein, nest+1);
       for (int i = 0; i < nest*2; i++)
-        printf(" ");
-      printf(")\n");
+        trace (" ");
+      trace (")\n");
       break;
     case E_LAM:
-      printf("(\\%s -> \n", e->lam.v);
+      trace ("(\\%s -> \n", e->lam.v);
       exprdump(e->lam.body, nest+1);
       for (int i = 0; i < nest*2; i++)
-        printf(" ");
-      printf(")\n");
+        trace (" ");
+      trace (")\n");
       break;
     case E_MAT: {
       Expr *b;
-      printf ("match ");
+      trace ("match ");
       exprdump (e->mat.e, nest+1);
       FOREACH (e->mat.block, b) {
         exprdump (b, nest+1);
@@ -892,8 +891,8 @@ exprdump(Expr *e, int nest)
     case E_MATBLOCK:
       exprdump (e->mb.match, nest+1);
       for (int i = 0; i < nest*2; i++)
-        printf(" ");
-      printf (" => ");
+        trace (" ");
+      trace (" => ");
       exprdump (e->mb.ret, nest+1);
       break;
   }

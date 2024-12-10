@@ -157,10 +157,16 @@ changename (Expr *expr, Env *env, char *old, char *new)
       if (strcmp (expr->id.v, old) == 0) {
         expr->id.v = new;
       } else {
+        /*
         Expr *vv = envlookup (env, expr->id.v);
         if (vv) {
+          printf ("changename %s: %s ->  %s ::: ", expr->id.v, old, new);
+          exprdump (vv, 0);
           changename (vv, env, old, new);
+          printf ("changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ");
+          exprdump (vv, 0);
         }
+        */
       }
       return;
     case E_BIN:
@@ -170,6 +176,7 @@ changename (Expr *expr, Env *env, char *old, char *new)
     case E_MAT: {
       Expr *mb;
       changename (expr->mat.e, env, old, new);
+      trace ("change name to %s -> %s\n", old, new);
       FOREACH (expr->mat.block, mb) {
         changename (mb->mb.match, env, old, new);
         changename (mb->mb.ret, env, old, new);
@@ -192,10 +199,14 @@ __alphaconv (Env *env, Expr *expr, List *fv)
   switch (expr->ty) {
     case E_NAT: return;
     case E_ID: {
+      /*
       Expr *vv = envlookup (env, expr->id.v);
       if (vv) {
+        printf ("__alphaconv %s -> ", expr->id.v);
+        exprdump (vv, 0);
         __alphaconv (env, vv, fv);
       }
+      */
       return;
     }
     case E_LET:
@@ -240,7 +251,7 @@ alphaconv (Env *env, Expr *expr, Expr *assign)
 
   exprdump (assign, 0);
   FOREACH (fv, s) {
-    printf ("%s is freevar\n", s->str);
+    trace ("%s is freevar\n", s->str);
   }
 
   if (length (fv) > 0) {
@@ -248,11 +259,94 @@ alphaconv (Env *env, Expr *expr, Expr *assign)
 
     __alphaconv (env, expr, fv);
 
-    printf ("alphaconv --> ");
+    trace ("alphaconv --> ");
     exprdump (expr, 0);
   }
 
   free (fv);
+}
+
+static Expr *
+copy (Expr *e)
+{
+  Expr *e2 = malloc (sizeof *e2);
+  *e2 = *e;
+  e2->_prev = e2->_next = NULL;
+
+  switch (e->ty) {
+    case E_NAT: 
+    case E_ID:
+      return e2;
+    case E_BIN:
+      e2->b.l = copy (e->b.l);
+      e2->b.r = copy (e->b.r);
+      return e2;
+    case E_LET:
+      e2->let.e = copy (e->let.e);
+      e2->let.ein = copy (e->let.ein);
+      return e2;
+    case E_LAM:
+      e2->lam.body = copy (e->lam.body);
+      return e2;
+    case E_MAT: {
+      Expr *mb, *newmb;
+      e2->mat.e = copy (e->mat.e);
+      e2->mat.block = newlist ();
+      FOREACH (e->mat.block, mb) {
+        newmb = copy (mb);
+        PUSH (e2->mat.block, newmb);
+      }
+      return e2;
+    }
+    case E_MATBLOCK:
+      e2->mb.match = copy (e->mb.match);
+      e2->mb.ret = copy (e->mb.ret);
+      return e2;
+    default:
+      panic ("what");
+  }
+}
+
+static void
+__betar (Expr *e, char *v, Expr *to)
+{
+  switch (e->ty) {
+    case E_NAT: return;
+    case E_ID:
+      if (strcmp (e->id.v, v) == 0)
+        *e = *to;
+      return;
+    case E_BIN:
+      __betar (e->b.l, v, to);
+      __betar (e->b.r, v, to);
+      return;
+    case E_LET:
+      __betar (e->let.e, v, to);
+      __betar (e->let.ein, v, to);
+      return;
+    case E_LAM:
+      __betar (e->lam.body, v, to);
+      return;
+    case E_MAT: {
+      Expr *mb;
+      __betar (e->mat.e, v, to);
+      FOREACH (e->mat.block, mb) {
+        __betar (mb->mb.match, v, to);
+        __betar (mb->mb.ret, v, to);
+      }
+      return;
+    }
+  }
+}
+
+static Expr *
+betareduction (Expr *e, char *v, Expr *to)
+{
+  trace ("beta reduction -> ");
+  exprdump (e, 0);
+  Expr *newe = copy (e);
+  __betar (newe, v, to);
+  return newe;
 }
 
 static Expr *
@@ -350,10 +444,9 @@ vcall (Env *env, Expr *le, Expr *re)
   Env *lamenv = l->lam.env;
   Env *new = emptyenv (lamenv);
   envreg (new, a, re);
-  printf ("envreg %s <-", a);
+  trace ("envreg %s <-", a);
   exprdump (re, 0);
-  // alphaconv (body, re);
-  return execexpr (new, body);
+  return execexpr (new, betareduction (body, a, re));
 }
 
 static Value *
@@ -420,7 +513,7 @@ exec(List *elist)
   Value *v;
   FOREACH (elist, e) {
     v = execexpr (env, e);
-    printf ("==========> %s\n", v->tostring (v));
+    printf ("%s\n", v->tostring (v));
   }
   return 0;
 }

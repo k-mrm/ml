@@ -72,4 +72,12 @@ listinit(List *l)
   l->prev = l;
 }
 
+static List *
+newlist (void)
+{
+  List *l = malloc (sizeof *l);
+  listinit (l);
+  return l;
+}
+
 #endif  // _ML_LIST_H

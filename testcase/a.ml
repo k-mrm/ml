@@ -40,3 +40,6 @@ g'.10.20.30;
 let add = \x -> \y -> x + y in
 let inc = add.1 in
 inc.(inc.(inc.(inc.(inc.(inc.(inc.0))))));
+
+(\y -> (\x -> \y -> x).y).1.2;
+(\x -> (\x -> x).x).200;

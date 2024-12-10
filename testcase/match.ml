@@ -8,5 +8,7 @@ let eq = \x -> \y -> match x {
                        _ => False
                      } in eq;
 
-let a = if.(eq.100.100).0.9999 in a;
-let a = if.(eq.100.200).0.9999 in a;
+let a = if.(eq.100.100).0.9999 in
+  stdout.a;
+let b = if.(eq.100.200).0.9999 in
+  stdout.b;

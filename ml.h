@@ -88,10 +88,11 @@ enum ExprType {
   E_LAM,
   E_MAT,
   E_MATBLOCK,
+  E_CFN,
 };
 
 struct Expr {
-  LIST(Expr);
+  LIST (Expr);
   ExprType ty;
 
   union {
@@ -121,6 +122,9 @@ struct Expr {
       Expr *match;
       Expr *ret;
     } mb;
+    struct {
+      Expr *(*cfn) (Env *);   
+    } c;
   };
 };
 
@@ -135,5 +139,7 @@ List *lex(const char *src);
 List *parse(List *tk);
 List *analyze(List *e);
 int exec(List *e);
+
+Expr *natast (ulong nat);
 
 #endif	// _ML_ML_H

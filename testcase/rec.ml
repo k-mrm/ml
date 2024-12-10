@@ -2,12 +2,18 @@ let True = \t -> \f -> t in True;
 let False = \t -> \f -> f in False;
 let if = \bool -> \p -> \q -> bool.p.q in if;
 
-let eq = \a -> \b -> match a {
-                       b => True |
+let eq = \n -> \m -> match n {
+                       m => True |
                        _ => False
                      } in eq;
 
-let Y = \fn -> (\x -> fn.(x.x)).(\y -> fn.(y.y)) in
-let factgen = \fa -> \n -> if.(eq.n.0).1.(n * (fa.(n-1))) in
+let Y = \fn -> (\x -> fn.(x.x)).(\x -> fn.(x.x)) in
+let factgen = \f -> \n -> if.(eq.n.0).1.(n * (f.(n-1))) in
 let fact = Y.factgen in
-fact.6;
+stdout.(fact.6);
+
+let fibogen = \f -> \n -> if.(eq.n.0).0.(
+                            if.(eq.n.1).1.((f.(n-1)) + (f.(n-2)))
+                          ) in
+let fibo = Y.fibogen in
+stdout.(fibo.20);

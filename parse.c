@@ -629,11 +629,11 @@ letast(ParseTree *pt)
 static Expr *
 lambdaast(ParseTree *pt)
 {
-  Expr *lam = malloc(sizeof(*lam));
+  Expr *lam = malloc (sizeof *lam);
   List *ptlist = pt->nt.pt;
   lam->ty = E_LAM;
-  lam->lam.v = ((ParseTree*)SECOND(ptlist))->t.tk->ident;
-  lam->lam.body = ep2ast(FOURTH(ptlist));
+  lam->lam.v = ((ParseTree*)SECOND (ptlist))->t.tk->ident;
+  lam->lam.body = ep2ast (FOURTH (ptlist));
   return lam;
 }
 
@@ -675,9 +675,9 @@ mp2ast (ParseTree *pt)
 }
 
 static Expr *
-binast(BinOp op, Expr *l, Expr *r)
+binast (BinOp op, Expr *l, Expr *r)
 {
-  Expr *bin = malloc(sizeof(*bin));
+  Expr *bin = malloc (sizeof(*bin));
   bin->ty = E_BIN;
   bin->b.op = op;
   bin->b.l = l;
@@ -686,18 +686,18 @@ binast(BinOp op, Expr *l, Expr *r)
 }
 
 static Expr *
-idast(char *v)
+idast (char *v)
 {
-  Expr *e = malloc(sizeof(*e));
+  Expr *e = malloc (sizeof(*e));
   e->ty = E_ID;
   e->id.v = v;
   return e;
 }
 
-static Expr *
-natast(ulong nat)
+Expr *
+natast (ulong nat)
 {
-  Expr *n = malloc(sizeof(*n));
+  Expr *n = malloc (sizeof(*n));
   n->ty = E_NAT;
   n->n.nat = nat;
   return n;
@@ -767,7 +767,7 @@ fp2ast(ParseTree *pt)
 {
   ParseTree *f = FIRST(pt->nt.pt);
   switch (f->t.tk->tt) {
-    case TOKEN_ID: return idast(f->t.tk->ident);
+    case TOKEN_ID: return idast (f->t.tk->ident);
     case TOKEN_NAT: return natast(f->t.tk->nat);
     case TOKEN_LPAREN: return ep2ast(SECOND(pt->nt.pt));
     default: panic("bug");

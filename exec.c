@@ -9,7 +9,7 @@ typedef struct Map    Map;
 typedef struct String String;
 
 struct Map {
-  LIST(Map);
+  LIST (Map);
 
   char *id;
   Expr *expr;
@@ -132,14 +132,18 @@ freevar (Expr *e)
         free (lm);
         free (lr);
       }
+      free (l1);
+
       return l;
     }
+    case E_CFN:
+      return l;
   }
   return NULL;
 }
 
 static char *
-newname ()
+newname (void)
 {
   static unsigned long long i = 0;
   char *n = malloc(16);
@@ -155,17 +159,6 @@ changename (Expr *expr, Env *env, char *old, char *new)
     case E_ID:
       if (strcmp (expr->id.v, old) == 0) {
         expr->id.v = new;
-      } else {
-        /*
-        Expr *vv = envlookup (env, expr->id.v);
-        if (vv) {
-          printf ("changename %s: %s ->  %s ::: ", expr->id.v, old, new);
-          exprdump (vv, 0);
-          changename (vv, env, old, new);
-          printf ("changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ");
-          exprdump (vv, 0);
-        }
-        */
       }
       return;
     case E_BIN:
@@ -188,6 +181,8 @@ changename (Expr *expr, Env *env, char *old, char *new)
       return;
     case E_LAM:
       changename (expr->lam.body, env, old, new);
+      return;
+    case E_CFN:
       return;
   }
 }
@@ -230,6 +225,8 @@ __alphaconv (Env *env, Expr *expr, List *fv)
       }
       return;
     }
+    case E_CFN:
+      return;
   }
 }
 
@@ -266,6 +263,7 @@ copy (Expr *e)
   switch (e->ty) {
     case E_NAT: 
     case E_ID:
+    case E_CFN:
       return e2;
     case E_BIN:
       e2->b.l = copy (e->b.l);
@@ -301,7 +299,8 @@ static void
 __betar (Expr *e, char *v, Expr *to)
 {
   switch (e->ty) {
-    case E_NAT: return;
+    case E_NAT:
+    case E_CFN: return;
     case E_ID:
       if (strcmp (e->id.v, v) == 0)
         *e = *to;
@@ -388,6 +387,41 @@ emptyenv (Env *parent)
   return e;
 }
 
+static Expr *
+cfnexpr (Expr *(*cfn) (Env *))
+{
+  Expr *e = malloc (sizeof *e);
+  e->ty = E_CFN;
+  e->c.cfn = cfn;
+  return e; 
+}
+
+// stdout = \__stdout_arg -> printf.__stdout_arg
+static Expr *
+__stdout (Env *env)
+{
+  int n;
+  Value *v;
+  Expr *e = envlookup (env, "__stdout_arg");
+  if (!e)
+    panic ("bug");
+
+  v = execexpr (env, e);
+  n = printf ("%s\n", v->tostring (v));
+
+  return natast (n);
+}
+
+static Expr *
+cstdout (void)
+{
+  Expr *lam = malloc (sizeof *lam);
+  lam->ty = E_LAM;
+  lam->lam.v = "__stdout_arg";
+  lam->lam.body = cfnexpr (__stdout);
+  return lam;
+}
+
 static Value *
 natexpr (Env *env, Expr *e)
 {
@@ -456,10 +490,6 @@ binexpr (Env *env, Expr *e)
   }
 }
 
-// let a = 100 in hogehoge a;
-// (\a -> hogehoge a) 100
-// let x = x+1 in x
-// (\x -> x) x + 1
 static Value *
 letexpr (Env *env, Expr *e)
 {
@@ -493,6 +523,12 @@ matexpr (Env *env, Expr *e)
 }
 
 static Value *
+execcfn (Env *env, Expr *e)
+{
+  return execexpr (env, e->c.cfn (env));
+}
+
+static Value *
 execexpr (Env *env, Expr *e)
 {
   switch (e->ty) {
@@ -502,8 +538,15 @@ execexpr (Env *env, Expr *e)
     case E_LET: return letexpr (env, e);
     case E_LAM: return lamexpr (env, e);
     case E_MAT: return matexpr (env, e);
+    case E_CFN: return execcfn (env, e);
   }
   return NULL;
+}
+
+static void
+embedcfn (Env *env)
+{
+  envreg (env, "stdout", cstdout ());
 }
 
 int
@@ -512,9 +555,12 @@ exec(List *elist)
   Expr *e;
   Env *env = emptyenv (NULL);
   Value *v;
+
+  embedcfn (env);
+
   FOREACH (elist, e) {
     v = execexpr (env, e);
-    printf ("%s\n", v->tostring (v));
+    trace ("%s\n", v->tostring (v));
   }
   return 0;
 }

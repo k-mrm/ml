@@ -29,17 +29,14 @@ let a = \n -> n + 10 in a;
 let g' = \x -> \y -> \z -> x - y * z in g';
 let h' = g'.10 in h';
 let z' = h'.20 in z';
-z'.30;
-z'.40;
-z'.(a.40);
+stdout.(z'.30).(z'.40).(z'.(a.40));
 
-g'.10.20.30;
+stdout.(g'.10.20.30);
 
-(\x -> \y -> \z -> x * y * z).100.200.300;
+stdout.((\x -> \y -> \z -> x * y * z).100.200.300);
 
 let add = \x -> \y -> x + y in
 let inc = add.1 in
-inc.(inc.(inc.(inc.(inc.(inc.(inc.0))))));
+stdout.(inc.(inc.(inc.(inc.(inc.(inc.(inc.0)))))));
 
-(\y -> (\x -> \y -> x).y).1.2;
-(\x -> (\x -> x).x).200;
+stdout.((\y -> (\x -> \y -> x).y).1.2).((\x -> (\x -> x).x).200);

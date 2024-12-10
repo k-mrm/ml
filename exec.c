@@ -396,20 +396,21 @@ cfnexpr (Expr *(*cfn) (Env *))
   return e; 
 }
 
+static Expr *cstdout (void);
+
 // stdout = \__stdout_arg -> printf.__stdout_arg
 static Expr *
 __stdout (Env *env)
 {
-  int n;
   Value *v;
   Expr *e = envlookup (env, "__stdout_arg");
   if (!e)
     panic ("bug");
 
   v = execexpr (env, e);
-  n = printf ("%s\n", v->tostring (v));
+  printf ("%s ", v->tostring (v));
 
-  return natast (n);
+  return cstdout ();
 }
 
 static Expr *
@@ -560,7 +561,7 @@ exec(List *elist)
 
   FOREACH (elist, e) {
     v = execexpr (env, e);
-    trace ("%s\n", v->tostring (v));
+    trace ("(trace) %s\n", v->tostring (v));
   }
   return 0;
 }

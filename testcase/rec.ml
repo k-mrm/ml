@@ -10,4 +10,4 @@ let eq = \a -> \b -> match a {
 let Y = \fn -> (\x -> fn.(x.x)).(\y -> fn.(y.y)) in
 let factgen = \fa -> \n -> if.(eq.n.0).1.(n * (fa.(n-1))) in
 let fact = Y.factgen in
-fact.5;
+fact.6;

@@ -23,7 +23,7 @@ let False = \x -> \y -> y in False;
 
 let f = \n -> n + 10 in f.20;
 let f' = \x -> \y -> x+y in f'.20;
-let f' = \x -> \y -> x+y in (f'.20).120;
+let f' = \x -> \y -> x+y in f'.20.120;
 
 let a = \n -> n + 10 in a;
 let g' = \x -> \y -> \z -> x - y * z in g';

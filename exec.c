@@ -52,7 +52,6 @@ delfreev (List *l, char *del)
   FOREACH (l, s) {
     if (strcmp (s->str, del) == 0) {
       delete (s);
-      return;
     }
   }
 }
@@ -198,17 +197,8 @@ __alphaconv (Env *env, Expr *expr, List *fv)
 {
   switch (expr->ty) {
     case E_NAT: return;
-    case E_ID: {
-      /*
-      Expr *vv = envlookup (env, expr->id.v);
-      if (vv) {
-        printf ("__alphaconv %s -> ", expr->id.v);
-        exprdump (vv, 0);
-        __alphaconv (env, vv, fv);
-      }
-      */
+    case E_ID:
       return;
-    }
     case E_LET:
       if (isfreev (fv, expr->let.v)) {
         char *a = newname ();
@@ -321,11 +311,14 @@ __betar (Expr *e, char *v, Expr *to)
       __betar (e->b.r, v, to);
       return;
     case E_LET:
-      __betar (e->let.e, v, to);
-      __betar (e->let.ein, v, to);
+      if (strcmp (e->let.v, v) != 0) {
+        __betar (e->let.e, v, to);
+        __betar (e->let.ein, v, to);
+      }
       return;
     case E_LAM:
-      __betar (e->lam.body, v, to);
+      if (strcmp (e->lam.v, v) != 0)
+        __betar (e->lam.body, v, to);
       return;
     case E_MAT: {
       Expr *mb;
@@ -342,10 +335,12 @@ __betar (Expr *e, char *v, Expr *to)
 static Expr *
 betareduction (Expr *e, char *v, Expr *to)
 {
-  trace ("beta reduction -> ");
+  trace ("beta reduction %s -> ", v);
   exprdump (e, 0);
   Expr *newe = copy (e);
   __betar (newe, v, to);
+  trace ("beta reduction done!!!!!!!==============>  ");
+  exprdump (newe, 0);
   return newe;
 }
 
@@ -461,13 +456,19 @@ binexpr (Env *env, Expr *e)
   }
 }
 
+// let a = 100 in hogehoge a;
+// (\a -> hogehoge a) 100
+// let x = x+1 in x
+// (\x -> x) x + 1
 static Value *
 letexpr (Env *env, Expr *e)
 {
   Env *new;
+
+  alphaconv (env, e->let.ein, e->let.e);
   envreg (env, e->let.v, e->let.e);
   new = emptyenv (env);
-  return execexpr (new, e->let.ein);
+  return execexpr (new, betareduction (e->let.ein, e->let.v, e->let.e));
 }
 
 static Value *

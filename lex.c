@@ -106,10 +106,10 @@ static void
 tokendump(Token *tk)
 {
   switch (tk->tt) {
-    case TOKEN_EOS: printf("EOS"); return;
-    case TOKEN_ID:  printf("ID(%s)", tk->ident); return;
-    case TOKEN_NAT: printf("NAT(%ld)", tk->nat); return;
-    default: printf("KW(%s)", fmt[tk->tt]); return;
+    case TOKEN_EOS: trace ("EOS"); return;
+    case TOKEN_ID:  trace ("ID(%s)", tk->ident); return;
+    case TOKEN_NAT: trace ("NAT(%ld)", tk->nat); return;
+    default: trace ("KW(%s)", fmt[tk->tt]); return;
   }
 }
 
@@ -133,9 +133,9 @@ dfastatedump(Dfa *m, State *q)
   Delta *d;
   FOREACH (&m->delta, d) {
     if (d->a == q)
-      printf("q%d --'%c'--> q%d%s\n", q->id, d->in, d->b->id, d->b->accept ? "A" : "");
+      trace ("q%d --'%c'--> q%d%s\n", q->id, d->in, d->b->id, d->b->accept ? "A" : "");
     if (d->b == q)
-      printf("q%d --'%c'--> q%d%s\n", d->a->id, d->in, q->id, q->accept ? "A" : "");
+      trace ("q%d --'%c'--> q%d%s\n", d->a->id, d->in, q->id, q->accept ? "A" : "");
   }
 }
 
@@ -145,9 +145,9 @@ dfastatedumpid(Dfa *m, int id)
   Delta *d;
   FOREACH (&m->delta, d) {
     if (d->a->id == id)
-      printf("q%d --'%c'--> q%d%s\n", id, d->in, d->b->id, d->b->accept ? "A" : "");
+      trace ("q%d --'%c'--> q%d%s\n", id, d->in, d->b->id, d->b->accept ? "A" : "");
     if (d->b->id == id)
-      printf("q%d --'%c'--> q%d%s\n", d->a->id, d->in, d->b->id, d->b->accept ? "A" : "");
+      trace ("q%d --'%c'--> q%d%s\n", d->a->id, d->in, d->b->id, d->b->accept ? "A" : "");
   }
 }
 
@@ -288,7 +288,7 @@ static Token *
 ident(Lex *l, uchar *ident)
 {
   Token *tk;
-  printf("ident is %s\n", ident);
+  trace ("ident is %s\n", ident);
   if (!strcmp(ident, "let"))
     return newtoken(TOKEN_LET);
   if (!strcmp(ident, "match"))
@@ -307,7 +307,7 @@ nat(Lex *l, uchar *n)
 {
   Token *tk;
   tk = newtoken(TOKEN_NAT);
-  printf("number is %s\n", n);
+  trace ("number is %s\n", n);
   tk->nat = atol(n);
   return tk;
 }
@@ -317,7 +317,7 @@ hex(Lex *l, uchar *n)
 {
   Token *tk;
   tk = newtoken(TOKEN_NAT);
-  printf("hex number is %s\n", n);
+  trace ("hex number is %s\n", n);
   // tk->ident = ident;
   return tk;
 }

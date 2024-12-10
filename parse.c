@@ -928,7 +928,6 @@ parse(List *tk)
   
   syntax(p);
 
-  printf("\n");
   while (!eos(&p->stream)) {
     ParseTree *pt = parseexpr(p, (S*)nt('S'), 0);
     PUSH(pts, pt);

@@ -16,7 +16,7 @@ typedef unsigned char   uchar;
 typedef unsigned int    uint;
 typedef unsigned long   ulong;
 
-#define ML_DEBUG
+// #define ML_DEBUG
 
 #ifdef ML_DEBUG
 #define trace(...)  printf (__VA_ARGS__)

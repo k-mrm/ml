@@ -7,7 +7,7 @@ let eq = \n -> \m -> match n {
                        _ => False
                      } in eq;
 
-let Y = \fn -> (\x -> fn.(x.x)).(\x -> fn.(x.x)) in
+let Y = \f -> (\x -> f.(x.x)).(\x -> f.(x.x)) in
 let factgen = \f -> \n -> if.(eq.n.0).1.(n * (f.(n-1))) in
 let fact = Y.factgen in
 stdout.(fact.6);
